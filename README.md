@@ -1,2 +1,3 @@
 # point-app-infrastructure
-pointappのインフラ
+
+インフラ構築で利用した IaC などを管理
