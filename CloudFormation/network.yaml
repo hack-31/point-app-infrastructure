@@ -249,6 +249,7 @@ Resources:
       SubnetId:
         Ref: pointAppSubnetPublicIngress1C
   ## Ingress用ルートテーブルのデフォルトルート
+  ## 0.0.0.0/0が指定されたらインターネットゲートウェイに紐づけるルール
   pointAppRouteIngressDefault:
     Type: AWS::EC2::Route
     Properties:
