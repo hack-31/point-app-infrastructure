@@ -1,0 +1,579 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Network resource template part1
+Resources:
+  # VPCの設定
+  pointAppVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: pointAppVpc
+  
+  ############### Subnet, RouteTable, IGW ###############
+  # コンテナ周りの設定
+  ## コンテナアプリ用のプライベートサブネット
+  pointAppSubnetPrivateContainer1A:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.8.0/24
+      VpcId:
+        Ref: pointAppVpc
+      AvailabilityZone: 
+        Fn::Select: 
+          - 0
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: point-app-subnet-private-container-1a
+        - Key: Type
+          Value: Isolated
+  pointAppSubnetPrivateContainer1C:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.9.0/24
+      VpcId:
+        Ref: pointAppVpc
+      AvailabilityZone: 
+        Fn::Select: 
+          - 1
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: point-app-subnet-private-container-1c
+        - Key: Type
+          Value: Isolated
+  ## コンテナアプリ用のルートテーブル
+  pointAppRouteApp:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: pointAppVpc
+      Tags:
+        - Key: Name
+          Value: piint-app-route-app
+  ## コンテナサブネットへルート紐付け
+  pointAppRouteAppAssociation1A:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: pointAppRouteApp
+      SubnetId: !Ref pointAppSubnetPrivateContainer1A
+  pointAppRouteAppAssociation1C:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: pointAppRouteApp
+      SubnetId:
+        Ref: pointAppSubnetPrivateContainer1C
+
+  # DB周りの設定
+  ## DB用のプライベートサブネット
+  pointAppSubnetPrivateDb1A:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.16.0/24
+      VpcId:
+        Ref: pointAppVpc
+      AvailabilityZone: 
+        Fn::Select: 
+          - 0
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: point-app-subnet-private-db-1a
+        - Key: Type
+          Value: Isolated
+  pointAppSubnetPrivateDb1C:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.17.0/24
+      VpcId:
+        Ref: pointAppVpc
+      AvailabilityZone: 
+        Fn::Select: 
+          - 1
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: point-app-subnet-private-db-1c
+        - Key: Type
+          Value: Isolated
+  ## DB用のルートテーブル
+  pointAppRouteDb:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: pointAppVpc
+      Tags:
+        - Key: Name
+          Value: point-app-route-db
+  ## DBサブネットへルート紐付け
+  pointAppRouteDbAssociation1A:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: pointAppRouteDb
+      SubnetId:
+        Ref: pointAppSubnetPrivateDb1A
+  pointAppRouteDbAssociation1C:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: pointAppRouteDb
+      SubnetId:
+        Ref: pointAppSubnetPrivateDb1C
+
+  # Cacheの設定
+  # Cache Server用のプライベートサブネット
+  pointAppSubnetPrivateCache1A:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.24.0/24
+      VpcId:
+        Ref: pointAppVpc
+      AvailabilityZone: 
+        Fn::Select: 
+          - 0
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: point-app-subnet-private-cache-1a
+        - Key: Type
+          Value: Isolated
+  pointAppSubnetPrivateCache1C:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.25.0/24
+      VpcId:
+        Ref: pointAppVpc
+      AvailabilityZone: 
+        Fn::Select: 
+          - 1
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: point-app-subnet-private-cache-1c
+        - Key: Type
+          Value: Isolated
+  ## Cache用のルートテーブル
+  pointAppRouteCache:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: pointAppVpc
+      Tags:
+        - Key: Name
+          Value: point-app-route-cache
+  ## Cacheサブネットへルート紐付け
+  pointAppRouteCacheAssociation1A:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: pointAppRouteCache
+      SubnetId:
+        Ref: pointAppSubnetPrivateCache1A
+  pointAppRouteCacheAssociation1C:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: pointAppRouteCache
+      SubnetId:
+        Ref: pointAppSubnetPrivateCache1C
+
+  # Ingress周りの設定
+  ## Ingress用のパブリックサブネット
+  pointAppSubnetPublicIngress1A:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.0.0/24
+      VpcId:
+        Ref: pointAppVpc
+      AvailabilityZone: 
+        Fn::Select: 
+          - 0
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: point-app-subnet-public-ingress-1a
+        - Key: Type
+          Value: Public
+  pointAppSubnetPublicIngress1C:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.1.0/24
+      VpcId:
+        Ref: pointAppVpc
+      AvailabilityZone: 
+        Fn::Select: 
+          - 1
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: point-app-subnet-public-ingress-1c
+        - Key: Type
+          Value: Public
+  ## Ingress用のルートテーブル
+  pointAppRouteIngress:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: pointAppVpc
+      Tags:
+        - Key: Name
+          Value: point-app-route-ingress
+  ## Ingressサブネットへルート紐付け
+  pointAppRouteIngressAssociation1A:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: pointAppRouteIngress
+      SubnetId:
+        Ref: pointAppSubnetPublicIngress1A
+  pointAppRouteIngressAssociation1C:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: pointAppRouteIngress
+      SubnetId:
+        Ref: pointAppSubnetPublicIngress1C
+  ## Ingress用ルートテーブルのデフォルトルート
+  pointAppRouteIngressDefault:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: pointAppRouteIngress
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: pointAppIgw
+    DependsOn:
+      - pointAppVpcgwAttachment
+
+  # 管理用サーバ周りの設定
+  ## 管理用のパブリックサブネット
+  pointAppSubnetPublicManagement1A:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.240.0/24
+      VpcId:
+        Ref: pointAppVpc
+      AvailabilityZone: 
+        Fn::Select: 
+          - 0
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: point-app-subnet-public-management-1a
+        - Key: Type
+          Value: Public
+  pointAppSubnetPublicManagement1C:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.241.0/24
+      VpcId:
+        Ref: pointAppVpc
+      AvailabilityZone: 
+        Fn::Select: 
+          - 1
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: point-app-subnet-public-management-1c
+        - Key: Type
+          Value: Public
+  ## 管理用サブネットのルートはIngressと同様として作成する
+  pointAppRouteManagementAssociation1A:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: pointAppRouteIngress
+      SubnetId:
+        Ref: pointAppSubnetPublicManagement1A
+  pointAppRouteManagementAssociation1C:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: pointAppRouteIngress
+      SubnetId:
+        Ref: pointAppSubnetPublicManagement1C
+
+  # インターネットへ通信するためのゲートウェイの作成
+  pointAppIgw:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: point-app-igw
+  pointAppVpcgwAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: pointAppVpc
+      InternetGatewayId:
+        Ref: pointAppIgw
+
+  # VPCエンドポイント周りの設定
+  ## VPCエンドポイント(Egress通信)用のプライベートサブネット
+  pointAppSubnetPrivateEgress1A:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.248.0/24
+      VpcId:
+        Ref: pointAppVpc
+      AvailabilityZone: 
+        Fn::Select: 
+          - 0
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: point-app-subnet-private-egress-1a
+        - Key: Type
+          Value: Isolated
+  pointAppSubnetPrivateEgress1C:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.249.0/24
+      VpcId:
+        Ref: pointAppVpc
+      AvailabilityZone: 
+        Fn::Select: 
+          - 1
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: point-app-subnet-private-egress-1c
+        - Key: Type
+          Value: Isolated
+
+  ############### Security groups ###############
+  # セキュリティグループの生成
+  ## インターネット公開のセキュリティグループの生成
+  pointAppSgIngress:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for ingress
+      GroupName: ingress
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: from 0.0.0.0/0:80
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+        - CidrIpv6: ::/0
+          Description: from ::/0:80
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+      Tags:
+        - Key: Name
+          Value: point-app-sg-ingress
+      VpcId:
+        Ref: pointAppVpc
+  ## 管理用サーバ向けのセキュリティグループの生成
+  pointAppSgManagement:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group of management server
+      GroupName: management
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      Tags:
+        - Key: Name
+          Value: point-app-sg-management
+      VpcId:
+        Ref: pointAppVpc
+  ## バックエンドコンテナアプリ用セキュリティグループの生成
+  pointAppSgContainer:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group of backend app
+      GroupName: container
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      Tags:
+        - Key: Name
+          Value: point-app-sg-container
+      VpcId:
+        Ref: pointAppVpc
+  ## DB用セキュリティグループの生成
+  pointAppSgDb:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group of database
+      GroupName: database
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      Tags:
+        - Key: Name
+          Value: point-app-sg-db
+      VpcId:
+        Ref: pointAppVpc
+  ## VPCエンドポイント用セキュリティグループの生成
+  pointAppSgEgress:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group of VPC Endpoint
+      GroupName: egress
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      Tags:
+        - Key: Name
+          Value: point-app-sg-vpce
+      VpcId:
+        Ref: pointAppVpc
+  ## Cache用セキュリティグループの生成
+  pointAppSgCache:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group of VPC Endpoint
+      GroupName: cache
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      Tags:
+        - Key: Name
+          Value: point-app-sg-cache
+      VpcId:
+        Ref: pointAppVpc
+
+  # ルール紐付け
+  ## Internet LB -> Back Container
+  pointAppSgFrontContainerFromsSgIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: HTTPS for Ingress
+      FromPort: 80
+      GroupId:
+        Fn::GetAtt:
+          - pointAppSgContainer
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - pointAppSgIngress
+          - GroupId
+      ToPort: 80
+  ## Back container -> DB
+  pointAppSgDbFromSgContainerTCP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: MySQL protocol from backend App
+      FromPort: 3306
+      GroupId:
+        Fn::GetAtt:
+          - pointAppSgDb
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - pointAppSgContainer
+          - GroupId
+      ToPort: 3306
+  ## Back container -> Cache
+  pointAppSgCacheFromSgContainerTCP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: Redis protocol from backend App
+      FromPort: 6379
+      GroupId:
+        Fn::GetAtt:
+          - pointAppSgCache
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - pointAppSgContainer
+          - GroupId
+      ToPort: 6379
+  ## Management server -> DB
+  pointAppSgDbFromSgManagementTCP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: MySQL protocol from management server
+      FromPort: 3306
+      GroupId:
+        Fn::GetAtt:
+          - pointAppSgDb
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - pointAppSgManagement
+          - GroupId
+      ToPort: 3306
+  ## Management Server -> Cache
+  pointAppSgCacheFromSgManagementTCP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: Redis protocol from management server
+      FromPort: 6379
+      GroupId:
+        Fn::GetAtt:
+          - pointAppSgCache
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - pointAppSgManagement
+          - GroupId
+      ToPort: 6379
+  ## Back container -> VPC endpoint
+  pointAppSgVpceFromSgContainerTCP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: HTTPS for Container App
+      FromPort: 443
+      GroupId:
+        Fn::GetAtt:
+          - pointAppSgEgress
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - pointAppSgContainer
+          - GroupId
+      ToPort: 443
+  ## Management Server -> VPC endpoint
+  pointAppSgVpceFromSgManagementTCP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: HTTPS for management server
+      FromPort: 443
+      GroupId:
+        Fn::GetAtt:
+          - pointAppSgEgress
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - pointAppSgManagement
+          - GroupId
+      ToPort: 443
